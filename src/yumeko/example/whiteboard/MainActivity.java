@@ -1,15 +1,14 @@
 package yumeko.example.whiteboard;
 
-import yumeko.example.whiteboard.Connection.OnActionReceiveListener;
+import yumeko.example.remote.Connection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.app.Activity;
-import android.content.Context;
 import android.view.Menu;
 
-public class MainActivity extends Activity implements WhiteboardView.OnWhiteboardActionListener,OnActionReceiveListener{
+public class MainActivity extends Activity implements WhiteboardView.OnWhiteboardActionListener,Connection.OnActionReceiveListener{
 
 	public static final int ACTION_START = 1;
 	public static final int ACTION_MOVE = 2;
@@ -24,28 +23,24 @@ public class MainActivity extends Activity implements WhiteboardView.OnWhiteboar
 		setContentView(R.layout.activity_main);
 		mWhiteboardView = (WhiteboardView) findViewById(R.id.whiteboardView);
 		mWhiteboardView.setOnWhiteboardActionListener(this);
-		Connection.setConnection("192.168.16.103",this);
+		mConnection = new Connection(this);
 	}
 	
 	@Override
 	protected void onPause(){
 		super.onPause();
-		if(mConnection!=null){
-			mConnection.close();
-			mConnection = null;
-		}
+		mConnection.disConnect();
 	}
 	
 	@Override
 	protected void onResume(){
 		super.onResume();
-		Connection.setConnection("192.168.16.103",this);
+		mConnection.connect("192.168.16.103");
 	}
 	
 	@Override
 	protected void onRestart(){
 		super.onRestart();
-		Connection.setConnection("192.168.16.103",this);
 	}
 
 	@Override
@@ -56,35 +51,19 @@ public class MainActivity extends Activity implements WhiteboardView.OnWhiteboar
 
 	@Override
 	public void onTouchStart(float x, float y) {
-		if(mConnection!=null){
-			mConnection.sendAction(ACTION_START,x,y);
-			System.out.println(">>>>>> send action");
-		}else{
-			System.out.println(">>>>>> mconnection ==null");
-		}
+		mConnection.sendAction(ACTION_START,x,y);
 		mWhiteboardView.setPathStart(x,y);
 	}
 
 	@Override
 	public void onTouchMove(float x, float y) {
-		if(mConnection!=null){
-			mConnection.sendAction(ACTION_MOVE,x,y);
-			System.out.println(">>>>>> send action");
-		}else{
-			System.out.println(">>>>>> mconnection ==null");
-		}
+		mConnection.sendAction(ACTION_MOVE,x,y);
 		mWhiteboardView.setPathMove(x,y);
 		mWhiteboardView.invalidate();
 	}
 
 	@Override
 	public void onTouchEnd(float x, float y) {
-		if(mConnection!=null){
-			mConnection.sendAction(ACTION_END,x,y);
-			System.out.println(">>>>>> send action");
-		}else{
-			System.out.println(">>>>>> mconnection ==null");
-		}
 		mWhiteboardView.setPathEnd(x, y);
 		mWhiteboardView.invalidate();
 	}
@@ -92,33 +71,26 @@ public class MainActivity extends Activity implements WhiteboardView.OnWhiteboar
 	@Override
 	public void onActionReceiveStart(float x, float y) {
 		mWhiteboardView.setPathStart(x,y);
+		mHandler.sendEmptyMessage(1);
 	}
 
 	@Override
 	public void onActionReceiveMove(float x, float y) {
 		mWhiteboardView.setPathMove(x,y);
-		hander.sendEmptyMessage(1);
-		
+		mHandler.sendEmptyMessage(1);
 	}
 
 	@Override
 	public void onActionReceiveEnd(float x, float y) {
 		mWhiteboardView.setPathEnd(x, y);
-		hander.sendEmptyMessage(1);
+		mHandler.sendEmptyMessage(1);
 	}
-
-
 	
-	Handler hander = new Handler(Looper.getMainLooper()){
+	Handler mHandler = new Handler(Looper.getMainLooper()){
+		
 		@Override
 		public void handleMessage(Message msg){
 			mWhiteboardView.invalidate();
 		}
-		
 	};
-
-	@Override
-	public void removeListener() {
-		mConnection = null;
-	}
 }
